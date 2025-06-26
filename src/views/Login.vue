@@ -23,14 +23,16 @@
 
 <script setup>
 import request from '../utils/request';
-import { reactive, onMounted,ref} from 'vue';
+import { reactive, onMounted, ref} from 'vue';
 import {User,Lock} from "@element-plus/icons-vue";
 import { ElMessage } from 'element-plus';
+import { useRouter } from 'vue-router'; // 添加这行
+
+const router = useRouter(); // 添加这行
 
 const data = reactive({
   form: {username: "",
     password: ""},
-  // 验证登入信息是否正确
   rules:{
     username:[
       {required:true,message:'请输入账号',trigger:'blur'}
@@ -45,7 +47,6 @@ const formRef=ref()
 const login = () => {
   formRef.value.validate((valid) => {
     if (valid) {
-      // 使用正确引入的request实例发送请求，这里假设已经在组件顶部正确引入了request
       request({
         url: "/user/login",
         method: "post",
@@ -61,10 +62,11 @@ const login = () => {
           sessionStorage.setItem("token", res.data.token);
           localStorage.setItem("account", JSON.stringify(res.data));
           ElMessage.success('登录成功');
+          
+          // 🔧 修改：使用 router.push 替代 location.href
           setTimeout(() => {
-// 模拟异步操作，例如从服务器获取数据
-            location.href = '/Manger';
-          }, 1000); // 延迟1秒执行
+            router.push('/Manger');
+          }, 1000);
 
         } else {
           ElMessage.error(res.msg)
@@ -74,7 +76,6 @@ const login = () => {
     }
   });
 };
-
 </script>
 
 <style scoped>
