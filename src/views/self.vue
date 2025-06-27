@@ -7,7 +7,6 @@
         </div>
       </template>
       
-      <!-- 头像上传 - 使用 Element Plus 上传组件 -->
       <div class="avatar-section">
         <el-upload
           :auto-upload="true"

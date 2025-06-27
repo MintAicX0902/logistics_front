@@ -150,9 +150,6 @@ const quickQuestions = ref([])
 const showQuickQuestions = ref(true)
 const chatContent = ref(null)
 
-// 当前正在进行的SSE连接
-let currentEventSource = null
-
 // AI头像（使用导入的图片）
 const aiAvatar = ref(aiAvatarImg)
 
@@ -174,32 +171,6 @@ const parseMarkdown = (text) => {
   }
 }
 
-// 增强的数据清理函数
-const cleanResponseData = (data) => {
-  if (!data || typeof data !== 'string') return ''
-  
-  let cleaned = data
-  
-  // 移除SSE协议相关字符串
-  cleaned = cleaned.replace(/\\ndata:/g, '')  
-  cleaned = cleaned.replace(/\ndata:/g, '')   
-  cleaned = cleaned.replace(/^data:/, '')     
-  cleaned = cleaned.replace(/\\nevent:/g, '') 
-  cleaned = cleaned.replace(/\nevent:/g, '')  
-  cleaned = cleaned.replace(/\\nid:/g, '')    
-  cleaned = cleaned.replace(/\nid:/g, '')     
-  
-  // 去除引号
-  if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
-    cleaned = cleaned.slice(1, -1)
-  }
-  
-  // 清理空白字符
-  cleaned = cleaned.trim()
-  
-  return cleaned
-}
-
 // 打开聊天窗口
 const openChat = async () => {
   isOpen.value = true
@@ -213,11 +184,6 @@ const openChat = async () => {
 // 关闭聊天窗口
 const closeChat = () => {
   isOpen.value = false
-  // 关闭时断开SSE连接
-  if (currentEventSource) {
-    currentEventSource.close()
-    currentEventSource = null
-  }
 }
 
 // 加载初始数据
@@ -283,7 +249,24 @@ const sendMessage = () => {
   sendStreamMessage(message, 'FREE_QUESTION')
 }
 
-// 增强修复的发送流式消息请求
+// 解析SSE行数据
+const processSSELine = (line) => {
+  const trimmedLine = line.trim()
+  
+  if (trimmedLine.startsWith('event:')) {
+    return { type: 'event', value: trimmedLine.substring(6).trim() }
+  } else if (trimmedLine.startsWith('data:')) {
+    return { type: 'data', value: trimmedLine.substring(5).trim() }
+  } else if (trimmedLine.startsWith('id:')) {
+    return { type: 'id', value: trimmedLine.substring(3).trim() }
+  } else if (trimmedLine === '') {
+    return { type: 'empty', value: '' }
+  }
+  
+  return { type: 'unknown', value: trimmedLine }
+}
+
+// 发送流式消息请求
 const sendStreamMessage = async (message, questionType) => {
   isLoading.value = true
   
@@ -309,7 +292,7 @@ const sendStreamMessage = async (message, questionType) => {
     const response = await fetch(`${baseUrl}/ai-chat/stream`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json;charset=UTF-8',
         'token': token
       },
       body: JSON.stringify({
@@ -342,66 +325,50 @@ const sendStreamMessage = async (message, questionType) => {
         const trimmedLine = line.trim()
         if (trimmedLine === '') continue // 跳过空行
         
-        console.log('处理SSE行:', trimmedLine) // 调试日志
+        console.log('原始行:', trimmedLine)
         
-        // 处理SSE事件
-        if (trimmedLine.startsWith('event:')) {
-          const eventName = trimmedLine.substring(6).trim()
-          console.log('接收到事件:', eventName)
+        // 临时解决方案：处理错误的后端格式
+        // 后端错误地将 "event: message" 等内容包含在数据中
+        if (trimmedLine.startsWith('data: ')) {
+          let data = trimmedLine.substring(6).trim() // 移除 "data: "
           
+          // 检查数据是否包含错误的事件标记
+          if (data.startsWith('event: ')) {
+            // 这是错误格式，需要过滤
+            if (data === 'event: connected' || data === 'event: done') {
+              // 这些是纯事件，不包含实际数据
+              console.log('检测到事件:', data)
+              if (data === 'event: done') {
+                messages.value[aiMessageIndex].isTyping = false
+                isLoading.value = false
+              }
+              continue
+            } else if (data.startsWith('event: message')) {
+              // 提取实际的消息内容
+              data = data.replace('event: message', '').trim()
+            }
+          }
+          
+          // 添加非空数据到消息
+          if (data) {
+            console.log('添加到消息:', data)
+            messages.value[aiMessageIndex].content += data
+            scrollToBottom()
+          }
+        } else if (trimmedLine.startsWith('event: ')) {
+          // 标准事件格式（如果后端修复了）
+          const eventName = trimmedLine.substring(7).trim()
+          console.log('标准事件:', eventName)
           if (eventName === 'done') {
             messages.value[aiMessageIndex].isTyping = false
             isLoading.value = false
-            console.log('消息接收完成')
-          } else if (eventName === 'error') {
-            throw new Error('AI服务出错')
           }
-        } 
-        // 处理SSE数据 - 增强的过滤逻辑
-        else if (trimmedLine.startsWith('data:')) {
-          const data = trimmedLine.substring(5).trim()
-          console.log('接收到的原始数据片段:', data)
-          
-          // 增强的数据过滤逻辑
-          if (data && 
-              data !== '' && 
-              data !== '""' && 
-              data !== '"' &&
-              data !== '\\ndata:' &&  
-              data !== '\ndata:' &&   
-              !data.match(/^\\?ndata:/) && // 过滤任何形式的 ndata:
-              !data.match(/^\\?nevent:/) && // 过滤任何形式的 nevent:
-              !data.match(/^\\?nid:/)     // 过滤任何形式的 nid:
-             ) {
-            
-            // 使用增强的清理函数
-            const cleanData = cleanResponseData(data)
-            
-            // 如果清理后的数据不为空，则追加到消息中
-            if (cleanData && cleanData.trim() !== '') {
-              console.log('追加到消息的数据:', cleanData)
-              messages.value[aiMessageIndex].content += cleanData
-              scrollToBottom()
-            }
-          }
-        }
-        // 处理其他可能的SSE格式
-        else if (trimmedLine.startsWith('id:')) {
-          // SSE ID，可以忽略
-          continue
-        }
-        else {
-          // 如果不是标准SSE格式，可能是纯数据
-          console.log('非标准SSE行，可能是纯数据:', trimmedLine)
         }
       }
     }
     
-    // 最终清理整个消息内容
-    const finalContent = messages.value[aiMessageIndex].content
-    const cleanedFinalContent = cleanResponseData(finalContent)
-    messages.value[aiMessageIndex].content = cleanedFinalContent
-    
+    // 确保最终状态正确
+    messages.value[aiMessageIndex].isTyping = false
     console.log('最终消息内容:', messages.value[aiMessageIndex].content)
     
   } catch (error) {
@@ -435,17 +402,9 @@ const scrollToBottom = () => {
 const handleAvatarError = (e) => {
   e.target.src = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 }
-
-// 组件卸载时清理
-onUnmounted(() => {
-  if (currentEventSource) {
-    currentEventSource.close()
-  }
-})
 </script>
 
 <style scoped>
-/* 样式保持不变，与之前相同 */
 .chat-button {
   position: fixed;
   bottom: 30px;
