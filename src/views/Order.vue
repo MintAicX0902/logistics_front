@@ -92,7 +92,7 @@
     </div>
 
     <!-- 创建订单对话框 -->
-    <el-dialog title="创建订单" v-model="showCreateOrderDialog" width="50%">
+    <el-dialog title="创建订单" v-model="showCreateOrderDialog" width="60%">
       <el-form :model="yundanForm" ref="yundanFormRef" :rules="yundanRules" label-width="100px">
         <el-form-item label="出发地" prop="startAddr">
           <el-select
@@ -118,6 +118,7 @@
             />
           </el-select>
         </el-form-item>
+        
         <el-form-item label="目的地" prop="endAddr">
           <el-select
             v-model="yundanForm.endAddr"
@@ -142,37 +143,99 @@
             />
           </el-select>
         </el-form-item>
+        
         <el-form-item label="收件人姓名" prop="yundanName">
           <el-input v-model="yundanForm.yundanName" placeholder="请输入收件人姓名" />
         </el-form-item>
+        
         <el-form-item label="收件人电话" prop="yundanPhone">
           <el-input v-model="yundanForm.yundanPhone" placeholder="请输入收件人电话" />
         </el-form-item>
+        
         <el-form-item label="货物信息">
           <el-table :data="huowuList" style="width: 100%;">
-            <el-table-column prop="name" label="货物名称">
+            <el-table-column prop="name" label="货物名称" width="200">
               <template #default="scope">
                 <el-input v-model="scope.row.name" placeholder="请输入货物名称" />
               </template>
             </el-table-column>
-            <el-table-column prop="weight" label="重量（吨）">
+            <el-table-column prop="weight" label="重量（吨）" width="150">
               <template #default="scope">
                 <el-input v-model.number="scope.row.weight" placeholder="请输入重量" type="number" />
               </template>
             </el-table-column>
+            <el-table-column label="货物图片" width="200">
+              <template #default="scope">
+                <div class="upload-container">
+                  <!-- 已上传的图片 -->
+                  <div v-if="scope.row.imageUrl" class="image-preview">
+                    <el-image
+                      :src="scope.row.imageUrl"
+                      :preview-src-list="[scope.row.imageUrl]"
+                      fit="cover"
+                      style="width: 80px; height: 80px;"
+                    />
+                    <el-icon class="delete-icon" @click="removeImage(scope.$index)">
+                      <Close />
+                    </el-icon>
+                  </div>
+                  <!-- 上传按钮 -->
+                  <el-upload
+                    v-else
+                    class="upload-btn"
+                    :action="uploadUrl"
+                    :headers="uploadHeaders"
+                    :show-file-list="false"
+                    :on-success="(res, file) => handleUploadSuccess(res, file, scope.$index)"
+                    :on-error="handleUploadError"
+                    :before-upload="beforeUpload"
+                    accept="image/*"
+                  >
+                    <el-button type="primary" size="small">
+                      <el-icon style="margin-right: 5px;"><Upload /></el-icon>
+                      上传图片
+                    </el-button>
+                  </el-upload>
+                </div>
+              </template>
+            </el-table-column>
             <el-table-column label="操作" width="100">
               <template #default="scope">
-                <el-button type="danger" @click="removeHuowu(scope.$index)">删除</el-button>
+                <el-button type="danger" size="small" @click="removeHuowu(scope.$index)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>
           <el-button type="primary" style="margin-top: 10px;" @click="addHuowu">添加货物</el-button>
         </el-form-item>
         <el-form-item label="运费（元）" prop="cost">
-          <el-input v-model="yundanForm.cost" disabled />
-          <el-button type="primary" style="margin-left: 10px;" @click="calculateCost">计算运费</el-button>
+          <el-row :gutter="10" align="middle">
+            <el-col :span="16">
+              <el-input 
+                v-model="yundanForm.cost" 
+                disabled 
+                placeholder="请点击计算按钮"
+              >
+                <template #suffix>
+                  <span style="color: #909399;">元</span>
+                </template>
+              </el-input>
+            </el-col>
+            <el-col :span="8">
+              <el-button 
+                type="primary" 
+                @click="calculateCost" 
+                style="width: 100%;"
+              >
+                计算运费
+              </el-button>
+            </el-col>
+          </el-row>
+          <!-- <div style="margin-top: 5px; font-size: 12px; color: #909399;">
+            运费 = 总重量 × 运输距离 × 0.5元/吨·公里
+          </div> -->
         </el-form-item>
       </el-form>
+      
       <!-- 最近使用地址 -->
       <div v-if="cachedAddresses.length > 0" style="margin-top: 20px;">
         <h4>最近使用地址</h4>
@@ -188,6 +251,7 @@
           </el-table-column>
         </el-table>
       </div>
+      
       <template #footer>
         <el-button @click="showCreateOrderDialog = false">取消</el-button>
         <el-button type="primary" @click="submitYundan">提交</el-button>
@@ -202,7 +266,7 @@
     />
 
     <!-- 订单详情弹窗 -->
-    <el-dialog title="运单详情" v-model="showDetailDialog" width="60%">
+    <el-dialog title="运单详情" v-model="showDetailDialog" width="70%">
       <el-descriptions :column="2" border v-if="currentOrder.code">
         <el-descriptions-item label="运单号">{{ currentOrder.code }}</el-descriptions-item>
         <el-descriptions-item label="支付状态">
@@ -233,14 +297,43 @@
           {{ currentOrder.cheliangCode }}
         </el-descriptions-item>
       </el-descriptions>
+      
+      <!-- 货物详情表格 -->
+      <div style="margin-top: 20px;" v-if="currentOrderHuowu.length > 0">
+        <h4 style="margin-bottom: 10px;">货物明细</h4>
+        <el-table :data="currentOrderHuowu" border style="width: 100%;">
+          <el-table-column type="index" label="序号" width="60" align="center" />
+          <el-table-column prop="name" label="货物名称" min-width="150" />
+          <el-table-column prop="weight" label="重量（吨）" width="100" align="center" />
+          <el-table-column label="货物图片" width="120" align="center">
+            <template #default="scope">
+              <el-image
+                v-if="scope.row.imageUrl"
+                :src="scope.row.imageUrl"
+                :preview-src-list="[scope.row.imageUrl]"
+                fit="cover"
+                style="width: 80px; height: 80px; cursor: pointer;"
+                preview-teleported
+              >
+                <template #error>
+                  <div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #f5f7fa;">
+                    <el-icon><Picture /></el-icon>
+                  </div>
+                </template>
+              </el-image>
+              <span v-else style="color: #909399;">暂无图片</span>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, reactive } from 'vue';
-import { ElMessage } from 'element-plus';
-import { Wallet, Check, View } from '@element-plus/icons-vue';
+import { ref, onMounted, reactive, computed } from 'vue';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import { Wallet, Check, View, Upload, Close, Picture } from '@element-plus/icons-vue';
 import request from '../utils/request';
 import PaymentDialog from '../components/PaymentDialog.vue';
 
@@ -292,6 +385,7 @@ const yundanForm = reactive({
   yundanPhone: '',
   cost: null,
 });
+
 const yundanRules = {
   startAddr: [{ required: true, message: '请输入出发地', trigger: 'change' }],
   endAddr: [{ required: true, message: '请输入目的地', trigger: 'change' }],
@@ -301,11 +395,28 @@ const yundanRules = {
     { pattern: /^1[3-9]\d{9}$/, message: '请输入有效的手机号码', trigger: 'blur' },
   ],
 };
+
 const yundanFormRef = ref(null);
 const startPoiList = ref([]);
 const endPoiList = ref([]);
-const huowuList = ref([{ name: '', weight: null }]);
 const cachedAddresses = ref([]);
+
+// 货物列表 - 包含imageUrl字段
+const huowuList = ref([{ name: '', weight: null, imageUrl: '' }]);
+
+// 查看订单详情相关
+const currentOrderHuowu = ref([]);
+
+// 上传相关配置
+const uploadUrl = computed(() => {
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+  return baseUrl + '/file/upload/huowu';
+});
+
+const uploadHeaders = computed(() => {
+  const token = sessionStorage.getItem('token');
+  return token ? { 'token': token } : {};
+});
 
 // 动态加载高德地图 API
 const loadAmapScript = () => {
@@ -523,9 +634,25 @@ const handlePaymentSuccess = () => {
 };
 
 // 查看订单详情
-const viewOrderDetail = (order) => {
+const viewOrderDetail = async (order) => {
   currentOrder.value = { ...order };
+  currentOrderHuowu.value = [];
   showDetailDialog.value = true;
+  
+  // 获取货物详情
+  try {
+    const res = await request({
+      url: '/huowu/findByYundanId',
+      method: 'get',
+      params: { yundanId: order.id }
+    });
+    
+    if (res.code === '200' && res.data) {
+      currentOrderHuowu.value = res.data;
+    }
+  } catch (error) {
+    console.error('获取货物详情失败:', error);
+  }
 };
 
 // 获取状态标签类型
@@ -799,7 +926,7 @@ const calculateCost = async () => {
 
 // 添加货物
 const addHuowu = () => {
-  huowuList.value.push({ name: '', weight: null });
+  huowuList.value.push({ name: '', weight: null, imageUrl: '' });
 };
 
 // 删除货物
@@ -811,18 +938,100 @@ const removeHuowu = (index) => {
   huowuList.value.splice(index, 1);
 };
 
+// 图片上传前验证
+const beforeUpload = (file) => {
+  const isImage = file.type.startsWith('image/');
+  const isLt5M = file.size / 1024 / 1024 < 5;
+
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件！');
+    return false;
+  }
+  if (!isLt5M) {
+    ElMessage.error('图片大小不能超过 5MB！');
+    return false;
+  }
+  return true;
+};
+
+// 上传成功处理
+const handleUploadSuccess = (response, file, huowuIndex) => {
+  if (response.code === '200') {
+    huowuList.value[huowuIndex].imageUrl = response.data;
+    ElMessage.success('图片上传成功');
+  } else {
+    ElMessage.error(response.msg || '上传失败');
+  }
+};
+
+// 上传失败处理
+const handleUploadError = (err) => {
+  ElMessage.error('图片上传失败，请重试');
+  console.error('上传失败:', err);
+};
+
+// 删除图片
+const removeImage = async (huowuIndex) => {
+  try {
+    await ElMessageBox.confirm('确定删除这张图片吗？', '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    });
+    
+    const imageUrl = huowuList.value[huowuIndex].imageUrl;
+    
+    // 调用后端删除接口
+    const res = await request({
+      url: '/file/delete',
+      method: 'delete',
+      params: { fileUrl: imageUrl }
+    });
+    
+    if (res.code === '200') {
+      huowuList.value[huowuIndex].imageUrl = '';
+      ElMessage.success('图片删除成功');
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除图片失败:', error);
+      ElMessage.error('删除失败，请重试');
+    }
+  }
+};
+
 // 提交订单
 const submitYundan = async () => {
   try {
     await yundanFormRef.value.validate();
+    
+    // 验证货物信息
     if (huowuList.value.some(item => !item.name || !item.weight || item.weight <= 0)) {
       ElMessage.error('请填写完整的货物信息，且重量需大于0');
       return;
     }
+    
+    // 可选：验证是否所有货物都上传了图片
+    const noImageItems = huowuList.value.filter(item => !item.imageUrl);
+    if (noImageItems.length > 0) {
+      const confirm = await ElMessageBox.confirm(
+        `有 ${noImageItems.length} 个货物未上传图片，是否继续提交？`,
+        '提示',
+        {
+          confirmButtonText: '继续提交',
+          cancelButtonText: '取消',
+          type: 'warning',
+        }
+      ).catch(() => false);
+      
+      if (!confirm) return;
+    }
+    
     if (!yundanForm.cost) {
       ElMessage.error('请先计算运费');
       return;
     }
+    
     const yundan = {
       yonghuId: data.self_account.id,
       startAddr: yundanForm.startAddr,
@@ -835,24 +1044,70 @@ const submitYundan = async () => {
       yundanPhone: yundanForm.yundanPhone,
       allweight: huowuList.value.reduce((sum, item) => sum + Number(item.weight), 0),
     };
+    
     const response = await request({
       url: '/yundan/save',
       method: 'post',
       data: { yundan, huowuList: huowuList.value, cost: Number(yundanForm.cost) },
     });
+    
     if (response.code === '200') {
       ElMessage.success('订单创建成功');
       showCreateOrderDialog.value = false;
+      
+      // 重置表单
       yundanFormRef.value.resetFields();
-      huowuList.value = [{ name: '', weight: null }];
+      huowuList.value = [{ name: '', weight: null, imageUrl: '' }];
       yundanForm.cost = null;
+      
       await loadYundanData();
     } else {
       ElMessage.error(response.msg || '订单创建失败');
     }
   } catch (error) {
-    ElMessage.error('订单创建失败，请检查网络');
-    console.error('提交订单失败:', error);
+    if (error !== 'cancel') {
+      ElMessage.error('订单创建失败，请检查网络');
+      console.error('提交订单失败:', error);
+    }
+  }
+};
+
+const customUpload = async (options, huowuIndex) => {
+  const { file, onProgress, onSuccess, onError } = options;
+  const token = sessionStorage.getItem('token');  // 从 sessionStorage 获取
+  
+  if (!token) {
+    ElMessage.error('请先登录');
+    onError(new Error('未登录'));
+    return;
+  }
+  
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  try {
+    const res = await request.post('/file/upload/huowu', formData, {
+      headers: {
+        'token': token,  // 使用 'token' 作为 header 名称
+      },
+      onUploadProgress: (progressEvent) => {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        onProgress({ percent: percentCompleted });
+      }
+    });
+    
+    if (res.code === '200') {
+      huowuList.value[huowuIndex].imageUrl = res.data;
+      ElMessage.success('图片上传成功');
+      onSuccess(res, file);
+    } else {
+      ElMessage.error(res.msg || '上传失败');
+      onError(new Error(res.msg || '上传失败'));
+    }
+  } catch (error) {
+    console.error('上传失败:', error);
+    ElMessage.error('上传失败，请稍后重试');
+    onError(error);
   }
 };
 
@@ -917,5 +1172,42 @@ onMounted(() => {
     flex-direction: column;
     gap: 10px;
   }
+}
+
+/* 图片上传相关样式 */
+.upload-container {
+  display: flex;
+  align-items: center;
+}
+
+.image-preview {
+  position: relative;
+  display: inline-block;
+}
+
+.image-preview .delete-icon {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #f56c6c;
+  color: white;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 2px;
+  display: none;
+}
+
+.image-preview:hover .delete-icon {
+  display: block;
+}
+
+.upload-btn {
+  display: inline-block;
+}
+
+/* 货物表格样式优化 */
+.el-table .cell {
+  padding: 8px 10px;
 }
 </style>
