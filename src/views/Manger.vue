@@ -56,6 +56,8 @@
       </div>
     </div>
   </div>
+
+  <AIChatWindow />
 </template>
 
 <script setup>
@@ -63,6 +65,7 @@ import { reactive, computed, onMounted, onUnmounted } from 'vue';
 import { RouterView } from 'vue-router';
 import request from '../utils/request';
 import { useRouter } from 'vue-router';
+import AIChatWindow from '../components/AIChatWindow.vue';
 
 // 默认头像
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
