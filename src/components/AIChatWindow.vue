@@ -130,7 +130,7 @@ import request from '../utils/request'
 import { ElMessage } from 'element-plus'
 import { marked } from 'marked'
 
-// 导入AI头像图片
+// 导入ai头像图片
 import aiAvatarImg from '@/assets/images/deepseek.png'
 
 // 配置marked
@@ -150,7 +150,7 @@ const quickQuestions = ref([])
 const showQuickQuestions = ref(true)
 const chatContent = ref(null)
 
-// AI头像（使用导入的图片）
+// ai头像
 const aiAvatar = ref(aiAvatarImg)
 
 // 用户头像计算属性
@@ -159,7 +159,7 @@ const userAvatar = computed(() => {
   return account.photo || 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 })
 
-// 使用marked进行Markdown解析
+// 使用marked进行markdown解析
 const parseMarkdown = (text) => {
   if (!text) return ''
   
@@ -249,7 +249,7 @@ const sendMessage = () => {
   sendStreamMessage(message, 'FREE_QUESTION')
 }
 
-// 解析SSE行数据
+// 解析sse行数据
 const processSSELine = (line) => {
   const trimmedLine = line.trim()
   
@@ -276,7 +276,7 @@ const sendStreamMessage = async (message, questionType) => {
   
   console.log('发送消息时的用户ID:', userId)
   
-  // 添加AI消息占位符
+  // 添加ai消息占位符
   const aiMessageIndex = messages.value.length
   messages.value.push({
     type: 'ai-message',
@@ -317,7 +317,7 @@ const sendStreamMessage = async (message, questionType) => {
       
       buffer += decoder.decode(value, { stream: true })
       
-      // 按行分割处理SSE数据
+      // 按行分割处理sse数据
       const lines = buffer.split('\n')
       buffer = lines.pop() || '' // 保留可能不完整的最后一行
       
@@ -327,10 +327,9 @@ const sendStreamMessage = async (message, questionType) => {
         
         console.log('原始行:', trimmedLine)
         
-        // 临时解决方案：处理错误的后端格式
-        // 后端错误地将 "event: message" 等内容包含在数据中
+        // 处理错误的后端格式
         if (trimmedLine.startsWith('data: ')) {
-          let data = trimmedLine.substring(6).trim() // 移除 "data: "
+          let data = trimmedLine.substring(6).trim() // 移除data:
           
           // 检查数据是否包含错误的事件标记
           if (data.startsWith('event: ')) {
@@ -356,7 +355,6 @@ const sendStreamMessage = async (message, questionType) => {
             scrollToBottom()
           }
         } else if (trimmedLine.startsWith('event: ')) {
-          // 标准事件格式（如果后端修复了）
           const eventName = trimmedLine.substring(7).trim()
           console.log('标准事件:', eventName)
           if (eventName === 'done') {
@@ -375,7 +373,7 @@ const sendStreamMessage = async (message, questionType) => {
     console.error('发送消息失败', error)
     ElMessage.error('AI服务暂时不可用，请稍后再试')
     
-    // 移除失败的AI消息
+    // 移除失败的ai消息
     messages.value.splice(aiMessageIndex, 1)
   } finally {
     isLoading.value = false

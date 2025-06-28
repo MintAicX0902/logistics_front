@@ -7,7 +7,7 @@ import 'element-plus/dist/index.css';
 import * as ElementPlusIconsVue from '@element-plus/icons-vue';
 import component from 'element-plus/es/components/tree-select/src/tree-select-option.mjs';
 const app = createApp(App);
-// 引用ElementPlus
+
 app.use(ElementPlus, {
     locale: zhCn,
 });

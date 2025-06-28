@@ -92,7 +92,6 @@ const userInfo = reactive({
   email: ''
 })
 
-// === Element Plus 上传配置 ===
 // 自定义上传方法
 const customUpload = async (options) => {
   console.log('=== 自定义上传开始 ===')
@@ -109,7 +108,6 @@ const customUpload = async (options) => {
     return
   }
   
-  // 创建 FormData
   const formData = new FormData()
   formData.append('file', file)
   
@@ -117,11 +115,10 @@ const customUpload = async (options) => {
     console.log('发送上传请求...')
     uploading.value = true
     
-    // 使用你的 request 工具发送请求
+    // 用request发送请求
     const res = await request.post('/yonghu/avatar/upload', formData, {
       headers: {
         'token': token,
-        // 不要设置 Content-Type，让浏览器自动设置
       },
       onUploadProgress: (progressEvent) => {
         const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
@@ -135,7 +132,7 @@ const customUpload = async (options) => {
       // 更新用户头像
       userInfo.photo = res.data
       
-      // 更新 localStorage
+      // 更新localStorage
       const selfAccount = JSON.parse(localStorage.getItem("self-account") || '{}')
       selfAccount.photo = res.data
       localStorage.setItem("self-account", JSON.stringify(selfAccount))
@@ -193,7 +190,6 @@ const beforeUpload = (file) => {
   return true
 }
 
-// === 其他功能保持不变 ===
 // 加载用户信息
 const loadUserInfo = async () => {
   try {
@@ -250,12 +246,12 @@ const resetForm = () => {
   ElMessage.info('已重置为原始数据')
 }
 
-// 定义 emit
+// 定义emit
 const emit = defineEmits(['updateUser'])
 
 // 页面加载时
 onMounted(() => {
-  // 检查 token
+  // 检查token
   console.log('=== 页面加载时 Token 状态 ===')
   const token = sessionStorage.getItem('token')
   console.log('Token 存在:', !!token)

@@ -50,10 +50,27 @@ export default defineConfig({
       '/user': {
         target: 'http://localhost:8080',
         changeOrigin: true
+      },
+      // 添加 WebSocket 代理
+      '/ws-chat': {
+        target: 'ws://localhost:8080',
+        ws: true,
+        changeOrigin: true
       }
     }
   },
   define: {
-    'import.meta.env.VITE_API_URL': JSON.stringify('http://localhost:8080')
+    'import.meta.env.VITE_API_URL': JSON.stringify('http://localhost:8080'),
+    // 添加 global polyfill
+    global: 'globalThis'
+  },
+  // 添加 optimizeDeps 配置
+  optimizeDeps: {
+    include: ['sockjs-client'],
+    esbuildOptions: {
+      define: {
+        global: 'globalThis'
+      }
+    }
   }
 });

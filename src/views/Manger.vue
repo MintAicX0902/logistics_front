@@ -7,7 +7,6 @@
         <span style="font-size:20px; color:white">物流订单跟踪系统</span>
       </div>
       
-      <!-- 新增菜单部分 -->
       <el-menu
         font-family="宋体"
         font-size="20px"
@@ -17,7 +16,7 @@
         style="flex:1; justify-content: flex-end; border-bottom: none;"
         @select="handleMenuSelect"
       >
-        <!-- 🔧 关键修改：安全访问 role -->
+        <!-- 安全访问 role -->
         <el-menu-item index="/Manger/Order" v-if="data.account?.role === '用户'">我的订单</el-menu-item>
         <el-menu-item index="/Manger/Order_Manger" v-if="data.account?.role !== '用户'">订单管理</el-menu-item>
       </el-menu>
@@ -42,7 +41,7 @@
           </template>
         </el-dropdown>
         
-        <!-- 🔧 最关键修改：安全访问用户名，这是导致页面白屏的主要原因 -->
+        <!-- 安全访问用户名，防止页面白屏 -->
         <span style="color:white; margin-left:5px;">
           {{ data.self_account?.username || data.account?.username || '用户' }}
         </span>
@@ -70,7 +69,7 @@ import AIChatWindow from '../components/AIChatWindow.vue';
 // 默认头像
 const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 
-// 🔧 关键修改：添加默认空对象，防止 null 错误
+// 添加默认空对象，防止null错误
 const data = reactive({
   account: JSON.parse(localStorage.getItem("account")) || {},
   self_account: JSON.parse(localStorage.getItem("self-account")) || {}
@@ -94,12 +93,12 @@ const handleUserInfoUpdate = () => {
   console.log('导航栏头像已更新:', data.self_account?.photo)
 }
 
-// 🔧 修改：安全访问属性
+// 安全访问属性
 console.log('账户角色:', data.account?.role)
 console.log('用户信息:', data.account?.username)
 
 const load = () => {
-  // 🔧 添加：确保有必要的数据才发请求
+  // 有必要的数据才发请求
   if (!data.account?.username || !data.account?.role) {
     console.error('缺少用户信息')
     return

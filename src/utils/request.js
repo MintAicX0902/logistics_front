@@ -28,7 +28,7 @@ request.interceptors.request.use(config => {
         console.log('跳过 token 设置，因为是登录相关接口');
     }
     
-    // 处理 Content-Type
+    // 处理content-type
     if (config.data instanceof FormData) {
         console.log('检测到 FormData，删除 Content-Type');
         delete config.headers['Content-Type'];
@@ -58,7 +58,7 @@ request.interceptors.response.use(
             }  
         }
         
-        // 处理 401 未授权
+        // 处理401未授权
         if (res.code === '401') {
             ElMessage.error('登录已过期，请重新登录');
             sessionStorage.removeItem('token');

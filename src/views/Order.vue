@@ -44,7 +44,7 @@
                 {{ formatDateTime(scope.row.createTime) }}
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="200" fixed="right">
+            <el-table-column label="操作" width="300" fixed="right">
               <template #default="scope">
                 <el-button 
                   v-if="scope.row.paymentStatus === 'UNPAID'"
@@ -67,6 +67,17 @@
                   style="margin-left: 10px;"
                 >
                   详情
+                </el-button>
+
+                <el-button
+                  v-if="scope.row.yundanStatusTypes === 1 && scope.row.yonghuId === data.self_account.id"
+                  type="primary"
+                  size="small"
+                  @click="openChat(scope.row)"
+                  :icon="ChatDotRound"
+                  style="margin-left: 10px;"
+                >
+                  聊天
                 </el-button>
               </template>
             </el-table-column>
@@ -230,9 +241,6 @@
               </el-button>
             </el-col>
           </el-row>
-          <!-- <div style="margin-top: 5px; font-size: 12px; color: #909399;">
-            运费 = 总重量 × 运输距离 × 0.5元/吨·公里
-          </div> -->
         </el-form-item>
       </el-form>
       
@@ -336,8 +344,22 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import { Wallet, Check, View, Upload, Close, Picture } from '@element-plus/icons-vue';
 import request from '../utils/request';
 import PaymentDialog from '../components/PaymentDialog.vue';
+import { ChatDotRound } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
 
-// 高德地图 Key
+const router = useRouter()
+
+// 打开聊天窗口
+const openChat = (yundan) => {
+  // 在新窗口中打开聊天页面
+  const routeData = router.resolve({
+    name: 'Chat',
+    params: { yundanCode: yundan.code }
+  })
+  window.open(routeData.href, '_blank', 'width=900,height=700')
+}
+
+// 高德地图k
 const amapKey = '73eef78f0fd0ae3939d29c0f9f891ecc';
 window._AMapSecurityConfig = {
   securityJsCode: 'a0636382e3bd394c061e4c1e2f5485c2',
@@ -401,7 +423,7 @@ const startPoiList = ref([]);
 const endPoiList = ref([]);
 const cachedAddresses = ref([]);
 
-// 货物列表 - 包含imageUrl字段
+// 货物列表
 const huowuList = ref([{ name: '', weight: null, imageUrl: '' }]);
 
 // 查看订单详情相关
@@ -418,7 +440,7 @@ const uploadHeaders = computed(() => {
   return token ? { 'token': token } : {};
 });
 
-// 动态加载高德地图 API
+// 动态加载高德地图api
 const loadAmapScript = () => {
   return new Promise((resolve, reject) => {
     if (typeof AMap !== 'undefined') {
@@ -681,7 +703,7 @@ const getStatusText = (status) => {
 const formatDateTime = (dateTime) => {
   if (!dateTime) return '';
   
-  // 处理数组格式的时间 [2025, 6, 26, 21, 8, 40]
+  // 处理数组格式的时间
   if (Array.isArray(dateTime)) {
     const [year, month, day, hour, minute, second] = dateTime;
     const date = new Date(year, month - 1, day, hour, minute, second || 0);
@@ -796,7 +818,7 @@ const openCreateOrderDialog = async () => {
   showCreateOrderDialog.value = true;
 };
 
-// POI 搜索 - 出发地
+// poi搜索 - 出发地
 const searchStartPOI = async (keyword) => {
   if (!keyword) {
     startPoiList.value = [];
@@ -822,7 +844,7 @@ const searchStartPOI = async (keyword) => {
   }
 };
 
-// POI 搜索 - 目的地
+// poi搜索 - 目的地
 const searchEndPOI = async (keyword) => {
   if (!keyword) {
     endPoiList.value = [];

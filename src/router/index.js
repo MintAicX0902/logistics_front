@@ -9,7 +9,13 @@ const router=createRouter({
             {path:'homeView',name:'homeView',component:()=>import('../views/HomeView.vue')},
             {path:'Order',name:'Order',component:()=>import('../views/Order.vue')},
             {path:'Order_Manger',name:'Order_Manger',component:()=>import('../views/Order_Manger.vue')},
-            {path:'self',name:'self',component:()=>import('../views/self.vue')} // 启用这个路由
+            {path:'self',name:'self',component:()=>import('../views/self.vue')},
+            {
+                path: '/chat/:yundanCode',
+                name: 'Chat',
+                component: () => import('../views/ChatWindow.vue'),
+                meta: { title: '在线聊天' }
+            }
         ]}
     ]
 })

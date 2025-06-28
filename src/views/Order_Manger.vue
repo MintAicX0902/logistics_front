@@ -12,13 +12,14 @@
         </el-table>
         </div>
     <div class="card" style="margin-bottom: 5px;">
-      <!-- <el-button type="primary" @click="search">查询</el-button> -->
+
       <el-button type="primary" @click="reset">重置</el-button>
         <el-button
               v-if="data.account.role === '配送员'"
               type="success"
               @click="startTransport()"
-            >开始运输</el-button>
+          >开始运输
+        </el-button>
     </div>
     <div class="card">
       <el-table :data="data.yundan" stripe size="large">
@@ -28,7 +29,7 @@
         <el-table-column prop="yundanName" label="收件人" />
         <el-table-column prop="yundanPhone" label="收件电话" />
         <el-table-column prop="yundanStatusName" label="订单状态" />
-        <el-table-column fixed="right" label="操作" min-width="200">
+        <el-table-column fixed="right" label="操作" min-width="320">
           <template #default="scope">
             <el-button 
               v-if="data.account.role === '管理员'"
@@ -49,7 +50,15 @@
               @click="openShareLocationDialog(scope.row)"
               :disabled="scope.row.yundanStatusName !== '运输中'"
             >分享定位</el-button>
-            
+            <el-button
+              v-if="scope.row.yundanStatusTypes === 1 && data.account.role === '配送员' && scope.row.sijiId === data.self_account.id"
+              type="primary"
+              size="small"
+              @click="openChat(scope.row)"
+              :icon="ChatDotRound"
+            >
+              聊天
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -124,11 +133,24 @@
 
 <script setup>
 import { reactive, ref, onMounted,watch } from 'vue';
-import { Search, Edit, Delete } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import request from '../utils/request';
+import { ChatDotRound } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
 
-// 高德地图 Key
+const router = useRouter()
+
+// 打开聊天窗口
+const openChat = (yundan) => {
+  // 在新窗口中打开聊天页面
+  const routeData = router.resolve({
+    name: 'Chat',
+    params: { yundanCode: yundan.code }
+  })
+  window.open(routeData.href, '_blank', 'width=900,height=700')
+}
+
+// 高德地图key
 const amapKey = '73eef78f0fd0ae3939d29c0f9f891ecc';
 window._AMapSecurityConfig = {
   securityJsCode: 'a0636382e3bd394c061e4c1e2f5485c2',
@@ -203,7 +225,7 @@ const submitAssignDelivery = async () => {
     return;
   }
   
-  // 从 availableCheliangs 中查找选中的车辆信息
+  // 从availableCheliangs中查找选中的车辆信息
   const selectedCheliang = availableCheliangs.value.find(
     item => item.id === assignForm.cheliangId
   );
@@ -226,7 +248,7 @@ const submitAssignDelivery = async () => {
         yundanId: assignForm.yundanId,
         cheliangId: assignForm.cheliangId,
         allweight: assignForm.allweight,
-        sijiId: selectedCheliang.sijiId, // 使用查找到的司机ID
+        sijiId: selectedCheliang.sijiId, // 使用查找到的司机id
       },
     });
     if (res.code === '200') {
@@ -339,7 +361,7 @@ watch(() => data.cheliang, (newCheliangList) => {
   });
 }, { deep: true });
 
-// 动态加载高德地图 API
+// 动态加载高德地图api
 const loadAmapScript = () => {
   return new Promise((resolve, reject) => {
     if (typeof AMap !== 'undefined') {
@@ -652,7 +674,7 @@ const getBrowserLocation = async () => {
   });
 };
 
-// POI 搜索
+// poi搜索
 const searchPOI = async (keyword) => {
   if (!locationForm.yundanId) {
     ElMessage.error('运单单号不能为空');
@@ -686,7 +708,7 @@ const searchPOI = async (keyword) => {
   }
 };
 
-// 选择 POI 地址
+// 选择poi地址
 const selectPOI = (value) => {
   if (!value) return;
   const { lng, lat, name } = JSON.parse(value);
@@ -803,8 +825,6 @@ const search = () => {
 const reset = () => {
  onMounted();
 };
-
-
 
 // 页面加载时查询运单
 onMounted(() => {

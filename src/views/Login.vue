@@ -57,7 +57,7 @@ import { useRouter } from 'vue-router';
 
 const router = useRouter();
 
-// 登录方式：password 或 sms
+// 登录方式pasword or sms
 const loginType = ref('password');
 
 // 验证码倒计时

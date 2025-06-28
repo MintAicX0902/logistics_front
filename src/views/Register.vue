@@ -59,7 +59,6 @@
   const register = () => {
     formRef.value.validate((valid) => {
       if (valid) {
-        // 使用正确引入的request实例发送请求，这里假设已经在组件顶部正确引入了request
         request({
           url: "/user/register",
           method: "post",
@@ -71,7 +70,6 @@
           if (res.code === "200") {
             ElMessage.success('注册成功')
             setTimeout(() => {
-  // 模拟异步操作，例如从服务器获取数据
               location.href = '/';
             }, 1000); // 延迟1秒执行
   
