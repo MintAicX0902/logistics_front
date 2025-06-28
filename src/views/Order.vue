@@ -68,7 +68,17 @@
                 >
                   详情
                 </el-button>
-
+                <el-button
+                  v-if="scope.row.yundanStatusTypes === 2 && scope.row.paymentStatus === 'PAID'"
+                  type="warning"
+                  size="small"
+                  @click="openRatingDialog(scope.row)"
+                  :icon="Comment"
+                  style="margin-left: 10px;"
+                  :disabled="scope.row.hasRated"
+                >
+                  {{ scope.row.hasRated ? '已评价' : '评价' }}
+                </el-button>
                 <el-button
                   v-if="scope.row.yundanStatusTypes === 1 && scope.row.yonghuId === data.self_account.id"
                   type="primary"
@@ -336,6 +346,11 @@
       </div>
     </el-dialog>
   </div>
+  <RatingDialog
+  v-model="showRatingDialog"
+  :order-info="currentRatingOrder"
+  @rating-success="handleRatingSuccess"
+  />
 </template>
 
 <script setup>
@@ -346,8 +361,39 @@ import request from '../utils/request';
 import PaymentDialog from '../components/PaymentDialog.vue';
 import { ChatDotRound } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
+import { Comment } from '@element-plus/icons-vue'
+import RatingDialog from '@/components/RatingDialog.vue'
 
 const router = useRouter()
+
+const showRatingDialog = ref(false)
+const currentRatingOrder = ref({})
+
+const openRatingDialog = async (order) => {
+  // 先检查是否可以评价
+  try {
+    const res = await request({
+      url: `/rating/check/${order.id}`,
+      method: 'get'
+    })
+    
+    if (res.code === '200' && res.data) {
+      currentRatingOrder.value = order
+      showRatingDialog.value = true
+    } else {
+      ElMessage.info('您已经评价过该订单')
+    }
+  } catch (error) {
+    ElMessage.error('检查评价状态失败')
+  }
+}
+
+// 评价成功后的处理
+const handleRatingSuccess = () => {
+  // 刷新订单列表，更新评价状态
+  loadYundanData()
+  ElMessage.success('感谢您的评价！')
+}
 
 // 打开聊天窗口
 const openChat = (yundan) => {
@@ -491,40 +537,49 @@ const initMap = async () => {
 const loadYundanData = async () => {
   try {
     if (!data.self_account.id) {
-      ElMessage.error('未检测到用户信息，请先登录');
-      return;
+      ElMessage.error('未检测到用户信息，请先登录')
+      return
     }
     
-    tableLoading.value = true;
+    tableLoading.value = true
     const response = await request({
       url: '/yundan/findByYonghuId',
       method: 'post',
       params: { yonghuId: data.self_account.id },
-    });
+    })
     
     if (response.code !== '200') {
-      ElMessage.warning('暂无运单数据');
-      return;
+      ElMessage.warning('暂无运单数据')
+      return
     }
     
-    data.yundanList = response.data || [];
-    pagination.total = data.yundanList.length;
+    data.yundanList = response.data || []
+    pagination.total = data.yundanList.length
     
-    console.log('前端接收到的运单数据:', data.yundanList);
-
-    // 为运单数据添加支付状态和状态名称
-    data.yundanList.forEach(yundan => {
-      console.log(`运单 ${yundan.code} 的支付状态:`, yundan.paymentStatus);
-      
+    // 检查每个订单的评价状态
+    for (const yundan of data.yundanList) {
       if (!yundan.paymentStatus) {
-        yundan.paymentStatus = 'UNPAID';
+        yundan.paymentStatus = 'UNPAID'
       }
-      yundan.yundanStatusName = getStatusText(yundan.yundanStatusTypes);
-      // 添加运费信息
+      yundan.yundanStatusName = getStatusText(yundan.yundanStatusTypes)
+      
+      // 检查是否已评价
+      if (yundan.yundanStatusTypes === 2 && yundan.paymentStatus === 'PAID') {
+        try {
+          const res = await request({
+            url: `/rating/yundan/${yundan.id}`,
+            method: 'get'
+          })
+          yundan.hasRated = res.code === '200' && res.data !== null
+        } catch (error) {
+          yundan.hasRated = false
+        }
+      }
+      
       if (!yundan.cost) {
-        getYundanCost(yundan);
+        getYundanCost(yundan)
       }
-    });
+    }
     
     // 清除地图标记
     if (map.value) {

@@ -15,6 +15,12 @@ const router=createRouter({
                 name: 'Chat',
                 component: () => import('../views/ChatWindow.vue'),
                 meta: { title: '在线聊天' }
+            },
+            {
+                path: 'performance',
+                name: 'Performance',
+                component: () => import('../views/Performance.vue'),
+                meta: { title: '绩效管理', requiresRole: '配送员' }
             }
         ]}
     ]

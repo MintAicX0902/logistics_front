@@ -19,6 +19,10 @@
         <!-- 安全访问 role -->
         <el-menu-item index="/Manger/Order" v-if="data.account?.role === '用户'">我的订单</el-menu-item>
         <el-menu-item index="/Manger/Order_Manger" v-if="data.account?.role !== '用户'">订单管理</el-menu-item>
+        
+        <el-menu-item index="/Manger/performance" v-if="data.account?.role === '配送员'">
+          绩效管理
+        </el-menu-item>
       </el-menu>
       
       <div style="width: fit-content;display:flex;align-items: center;padding-right:10px;">
